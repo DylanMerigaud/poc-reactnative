@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^13.0.0",
+    "@faker-js/faker": "^8.0.2",
     "@gluestack-ui/themed": "^0.1.10",
     "@react-navigation/native": "^6.0.2",
     "@tanstack/react-query": "^4.33.0",

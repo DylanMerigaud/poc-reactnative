@@ -1,12 +1,22 @@
-import { Image, ScrollView, StyleSheet } from "react-native";
+import {
+  Alert,
+  Button,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableHighlight,
+} from "react-native";
 
 import EditScreenInfo from "../../components/EditScreenInfo";
 import { Text, View } from "../../components/Themed";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { z } from "zod";
 import { JobSchema } from "../../features/jobs";
 import { Spinner } from "@gluestack-ui/themed";
+import { Share } from "react-native";
 
 const loaderHeight = 100;
 
@@ -26,13 +36,14 @@ export default function JobsScreen() {
       lastPage.length > 0 ? pages.length + 1 : undefined,
   });
 
-  console.log(infiniteQuery);
+  const onRefresh = useCallback(() => {
+    infiniteQuery.refetch();
+  }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Jobs</Text>
       <ScrollView
-        onScrollEndDrag={() => console.log("sfddsf")}
         onScroll={({ nativeEvent }) => {
           const endOfScroll =
             nativeEvent.layoutMeasurement.height +
@@ -41,55 +52,108 @@ export default function JobsScreen() {
 
           if (endOfScroll) infiniteQuery.fetchNextPage();
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={infiniteQuery.isRefetching}
+            onRefresh={onRefresh}
+          />
+        }
         scrollEventThrottle={400}
       >
         <View
           style={{
             flex: 1,
-            width: "100%",
             flexDirection: "row",
-            justifyContent: "center",
             flexWrap: "wrap",
+            justifyContent: "center",
             gap: 8,
             marginTop: 20,
+            marginHorizontal: 20,
           }}
         >
           {infiniteQuery.data?.pages?.flatMap((page) =>
             page.map((job) => (
-              <View
+              <Pressable
                 key={job.id}
-                style={{
-                  width: 250,
-                  padding: 10,
-                  borderWidth: 1,
-                  borderColor: "rgb(170, 170, 170)",
-                  borderRadius: 3,
+                onPress={async () => {
+                  try {
+                    const result = await Share.share({
+                      title: "Check this job !",
+                      message: `Just saw this job on the app, you should check it out !
+                        ${job.title} - ${job.descriptor} - ${job.area} - ${
+                        job.type
+                      } - ${new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(job.dayRate)}/day`,
+                    });
+                    if (result.action === Share.sharedAction) {
+                      if (result.activityType) {
+                        // shared with activity type of result.activityType
+                      } else {
+                        // shared
+                      }
+                    } else if (result.action === Share.dismissedAction) {
+                      // dismissed
+                    }
+                  } catch (error: any) {
+                    Alert.alert(error.message);
+                  }
                 }}
               >
-                <Image
-                  style={{ width: 225, height: 225, alignSelf: "center" }}
-                  source={{ uri: job.image }}
-                />
-                <Text style={{ fontSize: 19 }}>{job.title}</Text>
                 <View
                   style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
+                    width: 250,
+                    padding: 10,
+                    borderWidth: 1,
+                    borderColor: "rgb(170, 170, 170)",
+                    borderRadius: 3,
                   }}
                 >
-                  <Text style={{ color: "rgb(211 211 211)", fontSize: 16 }}>
-                    {job.descriptor}
+                  <Image
+                    style={{ width: 225, height: 225, alignSelf: "center" }}
+                    source={{ uri: job.image }}
+                  />
+                  <Text style={{ fontSize: 22, marginTop: 6 }}>
+                    {job.title}
                   </Text>
-                  <Text style={{ color: "rgb(186 186 186)", fontSize: 16 }}>
-                    {job.type}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      marginTop: 6,
+                    }}
+                  >
+                    <Text style={{ color: "rgb(211 211 211)", fontSize: 16 }}>
+                      {job.descriptor}
+                    </Text>
+                    <Text style={{ color: "rgb(186 186 186)", fontSize: 16 }}>
+                      {job.type}
+                    </Text>
+                  </View>
+                  <Text style={{ color: "rgb(140 140 140)", marginTop: 2 }}>
+                    {job.area}
+                  </Text>
+                  <Text
+                    style={{
+                      color: "rgb(255 255 205)",
+                      fontSize: 20,
+                      textAlign: "right",
+                      marginTop: 4,
+                    }}
+                  >
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                    }).format(job.dayRate)}
+                    /day
                   </Text>
                 </View>
-                <Text style={{ color: "rgb(140 140 140)" }}>{job.area}</Text>
-              </View>
+              </Pressable>
             ))
           )}
         </View>
-        {infiniteQuery.hasNextPage ? (
+        {infiniteQuery.hasNextPage || infiniteQuery.isLoading ? (
           <Spinner size="large" style={{ height: loaderHeight }} />
         ) : (
           <Text

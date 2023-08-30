@@ -117,8 +117,6 @@ export default function Jobs() {
     []
   );
 
-  console.log(infiniteQuery.isLoading, infiniteQuery.hasNextPage);
-
   useEffect(() => {
     if (
       (infiniteQuery.data?.pages?.reduce((acc, v) => acc + v.length, 0) || 0) -
@@ -128,14 +126,19 @@ export default function Jobs() {
       infiniteQuery.fetchNextPage();
   }, [lastViewableItemIndex]);
 
+  const numberOfColumns = Math.floor(
+    Dimensions.get("window").width / (jobWidth + 20)
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Jobs</Text>
       <FlatList
         horizontal={false}
         contentContainerStyle={styles.jobsWrapper}
-        columnWrapperStyle={{ gap: 8 }}
-        numColumns={Math.floor(Dimensions.get("window").width / jobWidth)}
+        columnWrapperStyle={numberOfColumns > 1 ? { gap: 8 } : undefined}
+        numColumns={numberOfColumns}
+        key={numberOfColumns}
         onRefresh={handleRefresh}
         refreshing={infiniteQuery.isRefetching}
         onViewableItemsChanged={handleViewableItemsChanged}
@@ -223,6 +226,7 @@ export default function Jobs() {
                   {new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: "USD",
+                    minimumFractionDigits: 0,
                   }).format(job.dayRate)}
                   /day
                 </Text>
